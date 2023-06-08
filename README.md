@@ -41,6 +41,8 @@ Requires an external 3.3V CAN transceiver, such as a [TI SN65HVD230](http://www.
 
 `CTX` and `CRX` pins can be changed by using `CAN.setPins(rx, tx)`.
 
+Loopback mode, sleep, and packet filtering currently do not work.
+
 ## Installation
 
 ### Using the Arduino IDE Library Manager

@@ -146,11 +146,6 @@ void ESP32S3Class::setPins(int rx, int tx)
   _txPin = (gpio_num_t)tx;
 }
 
-void ESP32S3Class::dumpRegisters(Stream& out)
-{
-
-}
-
 void ESP32S3Class::handleInterrupt(twai_message_t message)
 {
 	_rxId = message.identifier;

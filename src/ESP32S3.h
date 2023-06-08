@@ -39,8 +39,6 @@ public:
 
   void setPins(int rx, int tx);
 
-  void dumpRegisters(Stream& out);
-
 private:
   void reset();
 
