@@ -1,21 +1,22 @@
-// Copyright (c) Sandeep Mistry. All rights reserved.
+// Copyright (c) Firefly Racing. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#if 0//def ARDUINO_ARCH_ESP32
+#ifdef ARDUINO_ARCH_ESP32
 
-#ifndef ESP32_SJA1000_H
-#define ESP32_SJA1000_H
+#ifndef ESP32_S3_H
+#define ESP32_S3_H
 
 #include "CANController.h"
+#include <driver/twai.h>
 
 #define DEFAULT_CAN_RX_PIN GPIO_NUM_4
 #define DEFAULT_CAN_TX_PIN GPIO_NUM_5
 
-class ESP32SJA1000Class : public CANControllerClass {
+class ESP32S3Class : public CANControllerClass {
 
 public:
-  ESP32SJA1000Class();
-  virtual ~ESP32SJA1000Class();
+  ESP32S3Class();
+  virtual ~ESP32S3Class();
 
   virtual int begin(long baudRate);
   virtual void end();
@@ -43,13 +44,13 @@ public:
 private:
   void reset();
 
-  void handleInterrupt();
+  void handleInterrupt(twai_message_t message);
 
   uint8_t readRegister(uint8_t address);
   void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
   void writeRegister(uint8_t address, uint8_t value);
 
-  static void onInterrupt(void* arg);
+	[[noreturn]] static void receive_task(void*);
 
 private:
   gpio_num_t _rxPin;
@@ -58,7 +59,7 @@ private:
   intr_handle_t _intrHandle;
 };
 
-extern ESP32SJA1000Class CAN;
+extern ESP32S3Class CAN;
 
 #endif
 
