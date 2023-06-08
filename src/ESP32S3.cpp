@@ -14,6 +14,9 @@
 ESP32S3Class::ESP32S3Class() :
   CANControllerClass()
 {
+    _txPin = GPIO_NUM_5;
+    _rxPin = GPIO_NUM_4;
+    _loopback = false;
 }
 
 ESP32S3Class::~ESP32S3Class() {}
@@ -158,20 +161,6 @@ void ESP32S3Class::handleInterrupt(twai_message_t message)
 	_rxLength = message.rtr ? 0 : _rxDlc;
 	memcpy(_rxData, message.data, _rxLength);
 	_onReceive(_rxLength);
-}
-
-uint8_t ESP32S3Class::readRegister(uint8_t address)
-{
-  return 0;
-}
-
-void ESP32S3Class::modifyRegister(uint8_t address, uint8_t mask, uint8_t value)
-{
-}
-
-void ESP32S3Class::writeRegister(uint8_t address, uint8_t value)
-{
-
 }
 
 [[noreturn]] void ESP32S3Class::receive_task(void*)

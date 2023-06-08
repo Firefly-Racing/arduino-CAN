@@ -46,17 +46,12 @@ private:
 
   void handleInterrupt(twai_message_t message);
 
-  uint8_t readRegister(uint8_t address);
-  void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
-  void writeRegister(uint8_t address, uint8_t value);
-
 	[[noreturn]] static void receive_task(void*);
 
 private:
   gpio_num_t _rxPin;
   gpio_num_t _txPin;
   bool _loopback;
-  intr_handle_t _intrHandle;
 };
 
 extern ESP32S3Class CAN;
