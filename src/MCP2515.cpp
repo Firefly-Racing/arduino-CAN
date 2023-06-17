@@ -61,7 +61,8 @@ MCP2515Class::MCP2515Class() :
   _spiSettings(10E6, MSBFIRST, SPI_MODE0),
   _csPin(MCP2515_DEFAULT_CS_PIN),
   _intPin(MCP2515_DEFAULT_INT_PIN),
-  _clockFrequency(MCP2515_DEFAULT_CLOCK_FREQUENCY)
+  _clockFrequency(MCP2515_DEFAULT_CLOCK_FREQUENCY),
+  _pendingInt(false)
 {
 }
 
@@ -268,7 +269,7 @@ void MCP2515Class::onReceive(void(*callback)(int))
 #ifndef ESP8266
     SPI.usingInterrupt(digitalPinToInterrupt(_intPin));
 #endif
-    attachInterrupt(digitalPinToInterrupt(_intPin), MCP2515Class::onInterrupt, LOW);
+    attachInterrupt(digitalPinToInterrupt(_intPin), MCP2515Class::onInterrupt, FALLING);
   } else {
     detachInterrupt(digitalPinToInterrupt(_intPin));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
@@ -440,12 +441,20 @@ void MCP2515Class::reset()
 
 void MCP2515Class::handleInterrupt()
 {
-  if (readRegister(REG_CANINTF) == 0) {
-    return;
-  }
+  _pendingInt = true;
+}
 
-  while (parsePacket()) {
-    _onReceive(available());
+void MCP2515Class::handlePendingInterrupt()
+{
+  if (_pendingInt) {
+    _pendingInt = false;
+    if (readRegister(REG_CANINTF) == 0) {
+      return;
+    }
+
+    while (parsePacket()) {
+      _onReceive(available());
+    }
   }
 }
 

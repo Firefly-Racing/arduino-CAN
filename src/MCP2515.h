@@ -51,6 +51,7 @@ public:
   void setClockFrequency(long clockFrequency);
 
   void dumpRegisters(Stream& out);
+  void handlePendingInterrupt();
 
 private:
   void reset();
@@ -68,6 +69,7 @@ private:
   int _csPin;
   int _intPin;
   long _clockFrequency;
+  volatile bool _pendingInt;
 };
 
 extern MCP2515Class CAN;
