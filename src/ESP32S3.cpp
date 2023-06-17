@@ -160,14 +160,11 @@ void ESP32S3Class::handleInterrupt(twai_message_t message)
 
 [[noreturn]] void ESP32S3Class::receive_task(void*)
 {
-	Serial.println("can recv started");
 	while (true) {
 		twai_message_t message;
-		Serial.println("can recv waiting");
 		if (twai_receive(&message, portMAX_DELAY) != ESP_OK) {
 			continue;
 		}
-		Serial.println("can recv recv");
 		CAN.handleInterrupt(message);
 	}
 }
