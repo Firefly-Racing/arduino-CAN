@@ -7,6 +7,8 @@
 #define MCP2515_H
 
 #include <SPI.h>
+#include <FreeRTOS.h>
+#include <task.h>
 
 #include "CANController.h"
 
@@ -49,9 +51,9 @@ public:
   void setPins(int cs = MCP2515_DEFAULT_CS_PIN, int irq = MCP2515_DEFAULT_INT_PIN);
   void setSPIFrequency(uint32_t frequency);
   void setClockFrequency(long clockFrequency);
+  void setSPI(SPIClass* theSpi);
 
   void dumpRegisters(Stream& out);
-  void handlePendingInterrupt();
 
 private:
   void reset();
@@ -63,6 +65,7 @@ private:
   void writeRegister(uint8_t address, uint8_t value);
 
   static void onInterrupt();
+  static void handlePendingInterruptTask(void*);
 
 private:
   SPISettings _spiSettings;
@@ -70,6 +73,8 @@ private:
   int _intPin;
   long _clockFrequency;
   volatile bool _pendingInt;
+  TaskHandle_t _irqTask;
+  SPIClass *_theSpi;
 };
 
 extern MCP2515Class CAN;

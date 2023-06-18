@@ -5,6 +5,9 @@
 
 #include "MCP2515.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #define REG_BFPCTRL                0x0c
 #define REG_TXRTSCTRL              0x0d
 
@@ -62,22 +65,31 @@ MCP2515Class::MCP2515Class() :
   _csPin(MCP2515_DEFAULT_CS_PIN),
   _intPin(MCP2515_DEFAULT_INT_PIN),
   _clockFrequency(MCP2515_DEFAULT_CLOCK_FREQUENCY),
-  _pendingInt(false)
+  _pendingInt(false),
+  _theSpi(&SPI)
 {
+
 }
 
 MCP2515Class::~MCP2515Class()
 {
 }
 
+void MCP2515Class::setSPI(SPIClass* theSpi) {
+	_theSpi = theSpi;
+}
+
 int MCP2515Class::begin(long baudRate)
 {
   CANControllerClass::begin(baudRate);
 
+  xTaskCreate(handlePendingInterruptTask, "[LIBRARY] CAN bus", 2048, nullptr, configMAX_PRIORITIES - 5, &_irqTask);
+  if (!_irqTask) return 0;
+
   pinMode(_csPin, OUTPUT);
 
   // start SPI
-  SPI.begin();
+  _theSpi->begin();
 
   reset();
 
@@ -151,7 +163,7 @@ int MCP2515Class::begin(long baudRate)
 
 void MCP2515Class::end()
 {
-  SPI.end();
+  _theSpi->end();
 
   CANControllerClass::end();
 }
@@ -267,13 +279,13 @@ void MCP2515Class::onReceive(void(*callback)(int))
 
   if (callback) {
 #ifndef ESP8266
-    SPI.usingInterrupt(digitalPinToInterrupt(_intPin));
+    _theSpi->usingInterrupt(digitalPinToInterrupt(_intPin));
 #endif
     attachInterrupt(digitalPinToInterrupt(_intPin), MCP2515Class::onInterrupt, FALLING);
   } else {
     detachInterrupt(digitalPinToInterrupt(_intPin));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
-    SPI.notUsingInterrupt(digitalPinToInterrupt(_intPin));
+    _theSpi->notUsingInterrupt(digitalPinToInterrupt(_intPin));
 #endif
   }
 }
@@ -430,11 +442,11 @@ void MCP2515Class::dumpRegisters(Stream& out)
 
 void MCP2515Class::reset()
 {
-  SPI.beginTransaction(_spiSettings);
+  _theSpi->beginTransaction(_spiSettings);
   digitalWrite(_csPin, LOW);
-  SPI.transfer(0xc0);
+  _theSpi->transfer(0xc0);
   digitalWrite(_csPin, HIGH);
-  SPI.endTransaction();
+  _theSpi->endTransaction();
 
   delayMicroseconds(10);
 }
@@ -442,63 +454,68 @@ void MCP2515Class::reset()
 void MCP2515Class::handleInterrupt()
 {
   _pendingInt = true;
-}
-
-void MCP2515Class::handlePendingInterrupt()
-{
-  if (_pendingInt) {
-    _pendingInt = false;
-    if (readRegister(REG_CANINTF) == 0) {
-      return;
-    }
-
-    while (parsePacket()) {
-      _onReceive(available());
-    }
-  }
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  vTaskNotifyGiveFromISR(_irqTask, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
 uint8_t MCP2515Class::readRegister(uint8_t address)
 {
   uint8_t value;
 
-  SPI.beginTransaction(_spiSettings);
+  _theSpi->beginTransaction(_spiSettings);
   digitalWrite(_csPin, LOW);
-  SPI.transfer(0x03);
-  SPI.transfer(address);
-  value = SPI.transfer(0x00);
+  _theSpi->transfer(0x03);
+  _theSpi->transfer(address);
+  value = _theSpi->transfer(0x00);
   digitalWrite(_csPin, HIGH);
-  SPI.endTransaction();
+  _theSpi->endTransaction();
 
   return value;
 }
 
 void MCP2515Class::modifyRegister(uint8_t address, uint8_t mask, uint8_t value)
 {
-  SPI.beginTransaction(_spiSettings);
+  _theSpi->beginTransaction(_spiSettings);
   digitalWrite(_csPin, LOW);
-  SPI.transfer(0x05);
-  SPI.transfer(address);
-  SPI.transfer(mask);
-  SPI.transfer(value);
+  _theSpi->transfer(0x05);
+  _theSpi->transfer(address);
+  _theSpi->transfer(mask);
+  _theSpi->transfer(value);
   digitalWrite(_csPin, HIGH);
-  SPI.endTransaction();
+  _theSpi->endTransaction();
 }
 
 void MCP2515Class::writeRegister(uint8_t address, uint8_t value)
 {
-  SPI.beginTransaction(_spiSettings);
+  _theSpi->beginTransaction(_spiSettings);
   digitalWrite(_csPin, LOW);
-  SPI.transfer(0x02);
-  SPI.transfer(address);
-  SPI.transfer(value);
+  _theSpi->transfer(0x02);
+  _theSpi->transfer(address);
+  _theSpi->transfer(value);
   digitalWrite(_csPin, HIGH);
-  SPI.endTransaction();
+  _theSpi->endTransaction();
 }
 
 void MCP2515Class::onInterrupt()
 {
   CAN.handleInterrupt();
+}
+
+void MCP2515Class::handlePendingInterruptTask(void*) {
+	while (true) {
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		if (CAN._pendingInt) {
+			CAN._pendingInt = false;
+			if (CAN.readRegister(REG_CANINTF) == 0) {
+				return;
+			}
+
+			while (CAN.parsePacket()) {
+				CAN._onReceive(CAN.available());
+			}
+		}
+	}
 }
 
 MCP2515Class CAN;
