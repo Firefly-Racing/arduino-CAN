@@ -36,7 +36,7 @@ public:
 
   virtual int parsePacket();
 
-  virtual void onReceive(void(*callback)(int));
+  virtual void onReceive(void(*callback)());
 
   using CANControllerClass::filter;
   virtual int filter(int id, int mask);
@@ -54,6 +54,7 @@ public:
   void setSPI(SPIClass* theSpi);
 
   void dumpRegisters(Stream& out);
+  void poll();
 
 private:
   void reset();
@@ -73,7 +74,6 @@ private:
   int _intPin;
   long _clockFrequency;
   volatile bool _pendingInt;
-  TaskHandle_t _irqTask;
   SPIClass *_theSpi;
 };
 

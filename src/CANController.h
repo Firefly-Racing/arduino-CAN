@@ -32,7 +32,7 @@ public:
   virtual int peek();
   virtual void flush();
 
-  virtual void onReceive(void(*callback)(int));
+  virtual void onReceive(void(*)());
 
   virtual int filter(int id) { return filter(id, 0x7ff); }
   virtual int filter(int id, int mask);
@@ -49,7 +49,7 @@ protected:
   virtual ~CANControllerClass();
 
 protected:
-  void (*_onReceive)(int);
+  void (*_onReceive)();
 
   bool _packetBegun;
   long _txId;
